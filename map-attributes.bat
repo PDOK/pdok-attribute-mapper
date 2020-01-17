@@ -1,32 +1,25 @@
 @ECHO OFF
 
+for /f "tokens=1-4*" %%a in ("%*") do (
+	set INPUT_FILE=%%a
+	set LAYER_NAME=%%b
+	set OUTPUT_GPKG=%%c
+	set MAPPING=%%d
+	set OGR_ARGS=%%e
+)
+
 :loop
 IF NOT "%1"=="" (
-	IF "%1"=="--mapping" (
-		SET MAPPING=%2
-		SHIFT
-		SHIFT
-	)
-	IF "%1"=="--input-file" (
-		SET INPUT_FILE=%2
-		SHIFT
-		SHIFT
-	)
-	IF "%1"=="--layer-name" (
-		SET LAYER_NAME=%2
-		SHIFT
-		SHIFT
-	)
-	IF "%1"=="--output-gpkg" (
-		SET OUTPUT_GPKG=%2
-		SHIFT
-		SHIFT
-	)
 	IF "%1"=="--help" (
 		call :print_usage
 		GOTO :EOF
 	)
+	SHIFT
 	GOTO :loop
+)
+IF "%1"=="" (
+	call :print_usage
+	GOTO :EOF
 )
 
 set "_attributes="
@@ -45,7 +38,7 @@ for /F "tokens=*" %%z in (%MAPPING%) do (
 	)
 )
 set "query=SELECT !_attributes! from %LAYER_NAME%"
-ogr2ogr -f GPKG "%OUTPUT_GPKG%" "%INPUT_FILE%" -sql "!query!" -nln "%LAYER_NAME%"
+ogr2ogr -f GPKG "%OUTPUT_GPKG%" "%INPUT_FILE%" -sql "!query!" -nln "%LAYER_NAME%" %OGR_ARGS%
 echo.
 
 if %ERRORLEVEL% EQU 0 (
@@ -61,15 +54,17 @@ if %ERRORLEVEL% GEQ 1 (
 GOTO :EOF
 
 :print_usage 
-echo Usage: %~n0%~x0 --input-file ^<input-file^> --layer-name ^<layer-name^> --output-gpkg ^<output-gpkg^> --mapping ^<mapping^>
+echo Usage: %~n0%~x0 ^<input-file^> ^<layer-name^> ^<output-gpkg^> ^<mapping^> ^<optional:ogr2ogr-arguments^>
 echo.
-echo --input-file ^<input-file^>        Input file; any file format that GDAL/OGR can read
+echo ^<input-file^>                   Input file; any file format that GDAL/OGR can read
 echo.
-echo --layer-name ^<layer-name^>        Layer name in input file
+echo ^<layer-name^>                   Layer name in input file
 echo.
-echo --output-gpkg ^<output-gpkg^>      Filepath of GeoPackage output
+echo ^<output-gpkg^>                  Filepath of GeoPackage output
 echo.
-echo --mapping ^<mapping^>              Path to attribute mapping file
+echo ^<mapping^>                      Path to attribute mapping file
 echo.
-echo --help                           Print usage and exit
+echo ^<optional:ogr2ogr-arguments^>   Optional arguments for ogr2ogr 
+echo.
+echo --help                         Print usage and exit
 EXIT /B 0

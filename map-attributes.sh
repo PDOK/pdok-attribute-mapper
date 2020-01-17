@@ -2,58 +2,37 @@
 set -eu
 
 function print_usage() {
-  echo "Usage: $0 --input-file <input-file> --layer-name <layer-name> --output-gpkg <output-gpkg> --mapping <mapping>"
+  echo "Usage: $0 <input-file> <layer-name> <output-gpkg> <mapping> <optional:ogr2ogr-arguments>"
   echo ""
-  echo "--input-file <input-file>        Input file; any file format that GDAL/OGR can read"
+  echo "<input-file>                    Input file; any file format that GDAL/OGR can read"
   echo ""
-  echo "--layer-name <layer-name>        Layer name in input file"
+  echo "<layer-name>                    Layer name in input file"
   echo ""
-  echo "--output-gpkg <output-gpkg>      Filepath of GeoPackage output"
+  echo "<output-gpkg>                   Filepath of GeoPackage output"
   echo ""
-  echo "--mapping <mapping>              Path to attribute mapping file"
+  echo "<mapping>                       Path to attribute mapping file"
   echo ""
-  echo "--help                           Print usage and exit"
+  echo "<optional:ogr2ogr-arguments>    Optional ogr2ogr arguments"
+  echo ""
+  echo "--help                          Print usage and exit"
 }
 
-if [[ $# -eq 0 ]];then
+if [[ $# -eq 0 ]] | [[ "$*" == *--help* ]] | [[ $# -lt 4 ]];then
     print_usage
     exit 1
 fi
 
-while [[ $# -gt 0 ]]
-do
-  key="$1"
-  case $key in
-    --input-file)
-    INPUT_FILE="$2"
-    shift
-    shift
-    ;;
-    --layer-name)
-    LAYER_NAME="$2"
-    shift
-    shift
-    ;;
-    --output-gpkg)
-    OUTPUT_GPKG="$2"
-    shift
-    shift
-    ;;
-    --mapping)
-    MAPPING="$2"
-    shift
-    shift
-    ;;
-    --help)
-    print_usage
-    exit 0
-    ;;
-    *)
-    print_usage
-    exit 1
-    ;;
-  esac
-done
+INPUT_FILE="$1"
+LAYER_NAME="$2"
+OUTPUT_GPKG="$3"
+MAPPING="$4"
+OGR_ARGS="${@:5}"
+
+if ! test -f "$MAPPING"; then
+  echo "$0: error occured"
+  echo "<mapping> $MAPPING does not exist"
+  exit 1
+fi
 
 attributes=""
 while read -r line; do
@@ -69,9 +48,8 @@ done<"$MAPPING"
 query="SELECT $attributes from $LAYER_NAME"
 
 set +e
-ogr2ogr -f GPKG "$OUTPUT_GPKG" "$INPUT_FILE" -sql "$query" -nln "$LAYER_NAME"
+ogr2ogr -f GPKG "$OUTPUT_GPKG" "$INPUT_FILE" -sql "$query" ${OGR_ARGS}
 status=$?
-echo ""
 if [ $status -eq 0 ]; then
     echo "$0: ran succesfully"
 else
